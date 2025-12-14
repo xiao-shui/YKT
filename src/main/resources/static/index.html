@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>衣库通</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f7fa;
+        }
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .app-header h1 {
+            font-size: 24px;
+            font-weight: 500;
+            letter-spacing: 2px;
+        }
+        .app-sidebar {
+            box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+        }
+        .page-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #ebeef5;
+        }
+        .page-header h2 {
+            font-size: 20px;
+            font-weight: 500;
+            color: #303133;
+        }
+        .search-card {
+            margin-bottom: 20px;
+            background: #fff;
+        }
+        .table-card {
+            background: #fff;
+        }
+        .el-table {
+            border-radius: 4px;
+        }
+        .el-dialog {
+            border-radius: 8px;
+        }
+        .el-form-item {
+            margin-bottom: 20px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue-router@4/dist/vue-router.global.js"></script>
+</head>
+<body>
+    <div id="app"></div>
+    
+    <!-- 产品管理页面模板 -->
+    <template id="products-page">
+        <div style="padding: 20px;">
+            <div class="page-header">
+                <h2>产品管理</h2>
+            </div>
+            <el-card class="search-card" shadow="never">
+                    <el-form :inline="true" :model="searchForm" class="demo-form-inline">
+                        <el-form-item label="产品名称">
+                            <el-input v-model="searchForm.productName" placeholder="请输入产品名称" clearable />
+                        </el-form-item>
+                        <el-form-item label="分类">
+                            <el-input v-model="searchForm.category" placeholder="请输入分类" clearable />
+                        </el-form-item>
+                        <el-form-item label="品牌">
+                            <el-input v-model="searchForm.brand" placeholder="请输入品牌" clearable />
+                        </el-form-item>
+                        <el-form-item label="状态">
+                            <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+                                <el-option label="上架" value="上架" />
+                                <el-option label="下架" value="下架" />
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="handleSearch">查询</el-button>
+                            <el-button @click="handleReset">重置</el-button>
+                        </el-form-item>
+                    </el-form>
+            </el-card>
+            <el-card class="table-card" shadow="never">
+                <div style="margin-bottom: 16px;">
+                    <el-button type="primary" @click="handleAdd">新增产品</el-button>
+                </div>
+                <el-table :data="tableData" style="width: 100%;" border stripe>
+                    <el-table-column prop="productId" label="ID" width="80" align="center" />
+                    <el-table-column prop="productName" label="产品名称" min-width="150" />
+                    <el-table-column prop="category" label="分类" width="120" align="center" />
+                    <el-table-column prop="brand" label="品牌" width="120" align="center" />
+                    <el-table-column prop="basePrice" label="基础价格" width="120" align="right">
+                        <template #default="scope">
+                            <span style="color: #f56c6c; font-weight: 500;">¥{{ scope.row.basePrice }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="status" label="状态" width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.status === '上架' ? 'success' : 'info'" size="small">
+                                {{ scope.row.status }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="180" align="center" fixed="right">
+                        <template #default="scope">
+                            <el-button type="primary" size="small" link @click="handleEdit(scope.row)">编辑</el-button>
+                            <el-button type="danger" size="small" link @click="handleDelete(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <el-pagination
+                    v-model:current-page="pageNum"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]"
+                    :total="total"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    @size-change="handleSizeChange"
+                    @current-change="handleCurrentChange"
+                    style="margin-top: 20px;"
+                />
+            </el-card>
+            <el-dialog v-model="dialogVisible" :title="dialogTitle" width="650px" :close-on-click-modal="false">
+                    <el-form ref="form" :model="form" :rules="rules" label-width="100px">
+                        <el-form-item label="产品名称" prop="productName">
+                            <el-input v-model="form.productName" />
+                        </el-form-item>
+                        <el-form-item label="分类" prop="category">
+                            <el-input v-model="form.category" />
+                        </el-form-item>
+                        <el-form-item label="品牌" prop="brand">
+                            <el-input v-model="form.brand" />
+                        </el-form-item>
+                        <el-form-item label="描述" prop="description">
+                            <el-input v-model="form.description" type="textarea" />
+                        </el-form-item>
+                        <el-form-item label="基础价格" prop="basePrice">
+                            <el-input-number v-model="form.basePrice" :min="0.01" :precision="2" style="width: 100%;" />
+                        </el-form-item>
+                        <el-form-item label="状态" prop="status">
+                            <el-select v-model="form.status" style="width: 100%;">
+                                <el-option label="上架" value="上架" />
+                                <el-option label="下架" value="下架" />
+                            </el-select>
+                        </el-form-item>
+                    </el-form>
+                    <template #footer>
+                        <el-button @click="dialogVisible = false">取消</el-button>
+                        <el-button type="primary" @click="handleSave">确定</el-button>
+                    </template>
+                </el-dialog>
+        </div>
+    </template>
+
+    <!-- 仓库管理页面模板 -->
+    <template id="warehouses-page">
+        <div style="padding: 20px;">
+            <div class="page-header">
+                <h2>仓库管理</h2>
+            </div>
+            <el-card class="search-card" shadow="never">
+                    <el-form :inline="true" :model="searchForm" class="demo-form-inline">
+                        <el-form-item label="仓库名称">
+                            <el-input v-model="searchForm.warehouseName" placeholder="请输入仓库名称" clearable />
+                        </el-form-item>
+                        <el-form-item label="状态">
+                            <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
+                                <el-option label="启用" :value="1" />
+                                <el-option label="禁用" :value="0" />
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="handleSearch">查询</el-button>
+                            <el-button @click="handleReset">重置</el-button>
+                        </el-form-item>
+                    </el-form>
+            </el-card>
+            <el-card class="table-card" shadow="never">
+                <div style="margin-bottom: 16px;">
+                    <el-button type="primary" @click="handleAdd">新增仓库</el-button>
+                </div>
+                <el-table :data="tableData" style="width: 100%;" border stripe>
+                    <el-table-column prop="warehouseId" label="ID" width="80" align="center" />
+                    <el-table-column prop="warehouseName" label="仓库名称" min-width="150" />
+                    <el-table-column prop="location" label="位置" min-width="200" show-overflow-tooltip />
+                    <el-table-column prop="manager" label="管理员" width="120" align="center" />
+                    <el-table-column prop="capacity" label="容量" width="100" align="right" />
+                    <el-table-column prop="usedCapacity" label="已用容量" width="120" align="right" />
+                    <el-table-column prop="status" label="状态" width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'" size="small">
+                                {{ scope.row.status === 1 ? '启用' : '禁用' }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="180" align="center" fixed="right">
+                        <template #default="scope">
+                            <el-button type="primary" size="small" link @click="handleEdit(scope.row)">编辑</el-button>
+                            <el-button type="danger" size="small" link @click="handleDelete(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <el-pagination
+                    v-model:current-page="pageNum"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]"
+                    :total="total"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    @size-change="handleSizeChange"
+                    @current-change="handleCurrentChange"
+                    style="margin-top: 20px;"
+                />
+            </el-card>
+            <el-dialog v-model="dialogVisible" :title="dialogTitle" width="650px" :close-on-click-modal="false">
+                    <el-form ref="form" :model="form" :rules="rules" label-width="100px">
+                        <el-form-item label="仓库名称" prop="warehouseName">
+                            <el-input v-model="form.warehouseName" />
+                        </el-form-item>
+                        <el-form-item label="位置" prop="location">
+                            <el-input v-model="form.location" />
+                        </el-form-item>
+                        <el-form-item label="管理员" prop="manager">
+                            <el-input v-model="form.manager" />
+                        </el-form-item>
+                        <el-form-item label="容量" prop="capacity">
+                            <el-input-number v-model="form.capacity" :min="0" style="width: 100%;" />
+                        </el-form-item>
+                        <el-form-item label="状态" prop="status">
+                            <el-select v-model="form.status" style="width: 100%;">
+                                <el-option label="启用" :value="1" />
+                                <el-option label="禁用" :value="0" />
+                            </el-select>
+                        </el-form-item>
+                    </el-form>
+                    <template #footer>
+                        <el-button @click="dialogVisible = false">取消</el-button>
+                        <el-button type="primary" @click="handleSave">确定</el-button>
+                    </template>
+                </el-dialog>
+        </div>
+    </template>
+
+    <!-- 库存管理页面模板 -->
+    <template id="inventory-page">
+        <div style="padding: 20px;">
+            <div class="page-header">
+                <h2>库存管理</h2>
+            </div>
+            <el-card class="search-card" shadow="never">
+                    <el-form :inline="true" :model="searchForm" class="demo-form-inline">
+                        <el-form-item label="仓库">
+                            <el-select v-model="searchForm.warehouseId" placeholder="请选择仓库" clearable>
+                                <el-option
+                                    v-for="item in warehouseList"
+                                    :key="item.warehouseId"
+                                    :label="item.warehouseName"
+                                    :value="item.warehouseId"
+                                />
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="产品名称">
+                            <el-input v-model="searchForm.productName" placeholder="请输入产品名称" clearable />
+                        </el-form-item>
+                        <el-form-item>
+                            <el-button type="primary" @click="handleSearch">查询</el-button>
+                            <el-button @click="handleReset">重置</el-button>
+                        </el-form-item>
+                    </el-form>
+            </el-card>
+            <el-card class="table-card" shadow="never">
+                <div style="margin-bottom: 16px;">
+                    <el-button type="primary" @click="handleAdd">新增库存</el-button>
+                </div>
+                <el-table :data="tableData" style="width: 100%;" border stripe>
+                    <el-table-column prop="inventoryId" label="ID" width="80" align="center" />
+                    <el-table-column prop="warehouseName" label="仓库名称" width="150" />
+                    <el-table-column prop="productName" label="产品名称" min-width="150" show-overflow-tooltip />
+                    <el-table-column prop="color" label="颜色" width="100" align="center" />
+                    <el-table-column prop="size" label="尺码" width="100" align="center" />
+                    <el-table-column prop="quantity" label="总数量" width="100" align="right" />
+                    <el-table-column prop="allocatedQty" label="已分配" width="100" align="right" />
+                    <el-table-column prop="availableQty" label="可用数量" width="120" align="right">
+                        <template #default="scope">
+                            <span style="color: #67c23a; font-weight: 500;">{{ scope.row.availableQty }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="180" align="center" fixed="right">
+                        <template #default="scope">
+                            <el-button type="primary" size="small" link @click="handleEdit(scope.row)">编辑</el-button>
+                            <el-button type="danger" size="small" link @click="handleDelete(scope.row)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <el-pagination
+                    v-model:current-page="pageNum"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]"
+                    :total="total"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    @size-change="handleSizeChange"
+                    @current-change="handleCurrentChange"
+                    style="margin-top: 20px;"
+                />
+            </el-card>
+            <el-dialog v-model="dialogVisible" :title="dialogTitle" width="650px" :close-on-click-modal="false">
+                    <el-form ref="form" :model="form" :rules="rules" label-width="100px">
+                        <el-form-item label="仓库" prop="warehouseId">
+                            <el-select v-model="form.warehouseId" placeholder="请选择仓库" style="width: 100%;">
+                                <el-option
+                                    v-for="item in warehouseList"
+                                    :key="item.warehouseId"
+                                    :label="item.warehouseName"
+                                    :value="item.warehouseId"
+                                />
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="SKU ID" prop="skuId">
+                            <el-input-number v-model="form.skuId" :min="1" style="width: 100%;" />
+                        </el-form-item>
+                        <el-form-item label="数量" prop="quantity">
+                            <el-input-number v-model="form.quantity" :min="0" style="width: 100%;" />
+                        </el-form-item>
+                        <el-form-item label="已分配数量" prop="allocatedQty">
+                            <el-input-number v-model="form.allocatedQty" :min="0" style="width: 100%;" />
+                        </el-form-item>
+                    </el-form>
+                    <template #footer>
+                        <el-button @click="dialogVisible = false">取消</el-button>
+                        <el-button type="primary" @click="handleSave">确定</el-button>
+                    </template>
+                </el-dialog>
+        </div>
+    </template>
+
+    <script type="module" src="/js/main.js"></script>
+</body>
+</html>
+

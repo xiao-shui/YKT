@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.mapper.InventoryMapper">
+    
+    <resultMap id="BaseResultMap" type="org.example.entity.Inventory">
+        <id column="inventory_id" property="inventoryId"/>
+        <result column="warehouse_id" property="warehouseId"/>
+        <result column="sku_id" property="skuId"/>
+        <result column="quantity" property="quantity"/>
+        <result column="allocated_qty" property="allocatedQty"/>
+        <result column="available_qty" property="availableQty"/>
+        <result column="last_check_time" property="lastCheckTime"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <resultMap id="DetailResultMap" type="org.example.entity.InventoryVO" extends="BaseResultMap">
+        <result column="warehouse_name" property="warehouseName"/>
+        <result column="product_name" property="productName"/>
+        <result column="color" property="color"/>
+        <result column="size" property="size"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        i.inventory_id, i.warehouse_id, i.sku_id, i.quantity, i.allocated_qty, 
+        i.available_qty, i.last_check_time, i.create_time, i.update_time
+    </sql>
+
+    <select id="selectAll" resultMap="DetailResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               w.warehouse_name, p.product_name, ps.color, ps.size
+        FROM inventory i
+        LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
+        LEFT JOIN product_skus ps ON i.sku_id = ps.sku_id
+        LEFT JOIN products p ON ps.product_id = p.product_id
+        <where>
+            <if test="warehouseId != null">
+                AND i.warehouse_id = #{warehouseId}
+            </if>
+            <if test="productName != null and productName != ''">
+                AND p.product_name LIKE CONCAT('%', #{productName}, '%')
+            </if>
+        </where>
+        ORDER BY i.create_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*)
+        FROM inventory i
+        LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
+        LEFT JOIN product_skus ps ON i.sku_id = ps.sku_id
+        LEFT JOIN products p ON ps.product_id = p.product_id
+        <where>
+            <if test="warehouseId != null">
+                AND i.warehouse_id = #{warehouseId}
+            </if>
+            <if test="productName != null and productName != ''">
+                AND p.product_name LIKE CONCAT('%', #{productName}, '%')
+            </if>
+        </where>
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM inventory
+        WHERE inventory_id = #{inventoryId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="inventoryId">
+        INSERT INTO inventory (warehouse_id, sku_id, quantity, allocated_qty)
+        VALUES (#{warehouseId}, #{skuId}, #{quantity}, #{allocatedQty})
+    </insert>
+
+    <update id="update">
+        UPDATE inventory
+        <set>
+            <if test="quantity != null">quantity = #{quantity},</if>
+            <if test="allocatedQty != null">allocated_qty = #{allocatedQty},</if>
+            <if test="lastCheckTime != null">last_check_time = #{lastCheckTime},</if>
+            update_time = NOW()
+        </set>
+        WHERE inventory_id = #{inventoryId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM inventory WHERE inventory_id = #{inventoryId}
+    </delete>
+
+</mapper>
+
