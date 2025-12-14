@@ -19,10 +19,10 @@ public class WarehouseController {
 
     @GetMapping
     public Result<PageResult<Warehouse>> getList(
-            @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String warehouseName,
-            @RequestParam(required = false) Integer status) {
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "warehouseName", required = false) String warehouseName,
+            @RequestParam(value = "status", required = false) Integer status) {
         PageRequest pageRequest = new PageRequest();
         pageRequest.setPageNum(pageNum);
         pageRequest.setPageSize(pageSize);
@@ -31,7 +31,7 @@ public class WarehouseController {
     }
 
     @GetMapping("/{id}")
-    public Result<Warehouse> getById(@PathVariable Integer id) {
+    public Result<Warehouse> getById(@PathVariable("id") Integer id) {
         Warehouse warehouse = warehouseService.getById(id);
         return Result.success(warehouse);
     }
@@ -43,14 +43,14 @@ public class WarehouseController {
     }
 
     @PutMapping("/{id}")
-    public Result<String> update(@PathVariable Integer id, @Validated @RequestBody Warehouse warehouse) {
+    public Result<String> update(@PathVariable("id") Integer id, @Validated @RequestBody Warehouse warehouse) {
         warehouse.setWarehouseId(id);
         warehouseService.save(warehouse);
         return Result.success("更新成功", null);
     }
 
     @DeleteMapping("/{id}")
-    public Result<String> delete(@PathVariable Integer id) {
+    public Result<String> delete(@PathVariable("id") Integer id) {
         warehouseService.delete(id);
         return Result.success("删除成功", null);
     }

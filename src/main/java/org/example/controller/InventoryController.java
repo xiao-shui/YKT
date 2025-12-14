@@ -20,10 +20,10 @@ public class InventoryController {
 
     @GetMapping
     public Result<PageResult<InventoryVO>> getList(
-            @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) Integer warehouseId,
-            @RequestParam(required = false) String productName) {
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "warehouseId", required = false) Integer warehouseId,
+            @RequestParam(value = "productName", required = false) String productName) {
         PageRequest pageRequest = new PageRequest();
         pageRequest.setPageNum(pageNum);
         pageRequest.setPageSize(pageSize);
@@ -32,7 +32,7 @@ public class InventoryController {
     }
 
     @GetMapping("/{id}")
-    public Result<Inventory> getById(@PathVariable Integer id) {
+    public Result<Inventory> getById(@PathVariable("id") Integer id) {
         Inventory inventory = inventoryService.getById(id);
         return Result.success(inventory);
     }
@@ -44,14 +44,14 @@ public class InventoryController {
     }
 
     @PutMapping("/{id}")
-    public Result<String> update(@PathVariable Integer id, @Validated @RequestBody Inventory inventory) {
+    public Result<String> update(@PathVariable("id") Integer id, @Validated @RequestBody Inventory inventory) {
         inventory.setInventoryId(id);
         inventoryService.save(inventory);
         return Result.success("更新成功", null);
     }
 
     @DeleteMapping("/{id}")
-    public Result<String> delete(@PathVariable Integer id) {
+    public Result<String> delete(@PathVariable("id") Integer id) {
         inventoryService.delete(id);
         return Result.success("删除成功", null);
     }

@@ -19,12 +19,12 @@ public class ProductController {
 
     @GetMapping
     public Result<PageResult<Product>> getList(
-            @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String productName,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String brand,
-            @RequestParam(required = false) String status) {
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "productName", required = false) String productName,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "brand", required = false) String brand,
+            @RequestParam(value = "status", required = false) String status) {
         PageRequest pageRequest = new PageRequest();
         pageRequest.setPageNum(pageNum);
         pageRequest.setPageSize(pageSize);
@@ -33,7 +33,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    public Result<Product> getById(@PathVariable Integer id) {
+    public Result<Product> getById(@PathVariable("id") Integer id) {
         Product product = productService.getById(id);
         return Result.success(product);
     }
@@ -45,14 +45,14 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public Result<String> update(@PathVariable Integer id, @Validated @RequestBody Product product) {
+    public Result<String> update(@PathVariable("id") Integer id, @Validated @RequestBody Product product) {
         product.setProductId(id);
         productService.save(product);
         return Result.success("更新成功", null);
     }
 
     @DeleteMapping("/{id}")
-    public Result<String> delete(@PathVariable Integer id) {
+    public Result<String> delete(@PathVariable("id") Integer id) {
         productService.delete(id);
         return Result.success("删除成功", null);
     }
